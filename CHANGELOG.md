@@ -1,4 +1,4 @@
-# Unreleased
+# 2.4.0 (2026-08-22)
 
 * perf: shard `Mimic.Server` into one partition per scheduler (routed by owner
   pid) so concurrent async tests no longer serialize through a single process
