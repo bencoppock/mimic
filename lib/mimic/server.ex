@@ -205,7 +205,7 @@ defmodule Mimic.Server do
     expectations = Map.delete(state.expectations, pid)
     stubs = Map.delete(state.stubs, pid)
 
-    select = [{{{pid, :_}}, [], [true]}, {{{:_, :_}, pid}, [], [true]}]
+    select = [{{{pid, :_}, :_}, [], [true]}, {{{:_, :_}, pid}, [], [true]}]
 
     :ets.select_delete(@table, select)
 
