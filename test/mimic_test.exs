@@ -987,6 +987,36 @@ defmodule Mimic.Test do
       assert Calculator.add(1, 1) == 9
     end
 
+    test "removes the allowed pid's own ownership row when the allowed pid dies" do
+      parent_pid = self()
+
+      allowed_pid =
+        spawn(fn ->
+          # Registers this process as an owner (of an unrelated stub) so that
+          # Mimic.Server monitors it directly, independent of the allow row
+          # asserted on below.
+          Calculator |> stub(:mult, fn _, _ -> :unused end)
+          Calculator |> allow(parent_pid, self())
+
+          send(parent_pid, :ready)
+
+          receive do
+            :done -> :ok
+          end
+        end)
+
+      assert_receive :ready
+      assert :ets.lookup(Mimic.Coordinator, {allowed_pid, Calculator}) != []
+
+      ref = Process.monitor(allowed_pid)
+      send(allowed_pid, :done)
+      assert_receive {:DOWN, ^ref, :process, ^allowed_pid, :normal}
+
+      :timer.sleep(1)
+
+      assert :ets.lookup(Mimic.Coordinator, {allowed_pid, Calculator}) == []
+    end
+
     test "raises if you try to allow process while in global mode" do
       set_mimic_global()
       parent_pid = self()
