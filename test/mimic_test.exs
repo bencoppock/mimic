@@ -1364,7 +1364,7 @@ defmodule Mimic.Test do
     end
 
     test "lazy allowances registered under private mode do not apply after switching to global mode" do
-      parent_pid = self()
+      test_pid = self()
       name = :"lazy_mode_switch_#{System.unique_integer([:positive])}"
 
       Calculator
@@ -1376,16 +1376,18 @@ defmodule Mimic.Test do
           Process.register(self(), name)
 
           receive do
-            :call_add -> send(parent_pid, {:result, Calculator.add(1, 3)})
+            :call_add -> send(test_pid, {:result, Calculator.add(1, 3)})
           end
         end)
 
-      spawn_link(fn ->
-        Mimic.set_mimic_global()
-        send(parent_pid, :global_set)
+      global_owner_pid = spawn(fn -> Process.sleep(:infinity) end)
+
+      on_exit(fn ->
+        Process.exit(global_owner_pid, :kill)
+        Mimic.Coordinator.set_private_mode()
       end)
 
-      assert_receive :global_set
+      :ok = Mimic.Coordinator.set_global_mode(global_owner_pid)
 
       # allowed_pid's lazy allowance was registered while mode was private, and
       # the global owner never stubbed Calculator. The call should fall through
